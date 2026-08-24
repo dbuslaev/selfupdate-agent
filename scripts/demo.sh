@@ -105,11 +105,12 @@ go build -o "$DEMO/installer" ./cmd/installer
 SERVER_PID=$!
 sleep 0.5
 
-# The installer normally registers with launchd or systemd. Here it only places
-# the binaries and enrolls; the bash loop below plays the supervisor.
+# -no-autostart: the installer would normally register with launchd or systemd,
+# but the loop below plays that part. Registering as well would leave a real
+# service on the machine after the demo, pointing at a folder that gets deleted.
 AGENT_INSTALL_DIR="$PWD/$INSTALL" "$DEMO/installer" install \
   -from "$DEMO" -to "$INSTALL" -manifest "$CHANNEL" \
-  -enroll "$FLEET/enroll" -code DEMO-CODE-123 -report "$FLEET/events" 2>&1 | grep -v autostart || true
+  -enroll "$FLEET/enroll" -code DEMO-CODE-123 -report "$FLEET/events" -no-autostart
 
 rule "publishing 1.0.1"
 build_app 1.0.1 "$DIST/$ARTIFACT"

@@ -13,7 +13,9 @@ Standard library only, no third-party packages.
 ```
 
 Self-contained: it generates a throwaway signing key, starts a local server, and
-cleans up after itself in `.demo/`. Takes about a minute and shows three things.
+keeps everything inside `.demo/`. It does not register anything with launchd or
+systemd — a bash loop stands in for the service manager — so nothing is left
+behind on your machine. Takes about a minute and shows three things.
 
 1. Version 1.0.0 updates itself to 1.0.1.
 2. A bad 1.0.2 is caught and refused before it gets installed.

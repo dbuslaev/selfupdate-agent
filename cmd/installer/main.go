@@ -57,7 +57,8 @@ func main() {
 
 func usage() {
 	fmt.Fprintf(os.Stderr, `usage:
-  installer install   -from DIR -to DIR -manifest URL [-enroll URL -code CODE] [-report URL] [-system]
+  installer install   -from DIR -to DIR -manifest URL [-enroll URL -code CODE]
+                      [-report URL] [-system] [-no-autostart]
   installer uninstall [-system] [-purge]
 
   -from      directory holding the built %s and %s binaries
@@ -79,6 +80,7 @@ type installOptions struct {
 	enrollCode  string
 	reportURL   string
 	system      bool
+	noAutostart bool
 }
 
 func install(args []string) error {
@@ -91,6 +93,7 @@ func install(args []string) error {
 	fs.StringVar(&o.enrollCode, "code", "", "one-time enrollment code")
 	fs.StringVar(&o.reportURL, "report", "", "fleet API events endpoint")
 	fs.BoolVar(&o.system, "system", false, "install machine-wide")
+	fs.BoolVar(&o.noAutostart, "no-autostart", false, "place the binaries but do not register with the service manager")
 	fs.Parse(args)
 
 	if o.manifestURL == "" {
@@ -121,14 +124,24 @@ func install(args []string) error {
 	if err := ensureIdentity(paths, o); err != nil {
 		return err
 	}
-	if err := service.Install(cfg); err != nil {
-		return fmt.Errorf("register service: %w", err)
+	// Registration is normally the point: without a service manager the program
+	// exits after staging an update and nothing starts it again. The demo skips
+	// it because it supplies its own supervisor, and two supervisors would
+	// fight over the same process.
+	if !o.noAutostart {
+		if err := service.Install(cfg); err != nil {
+			return fmt.Errorf("register service: %w", err)
+		}
 	}
 
 	fmt.Printf("installed %s\n", installedVersion(paths))
 	fmt.Printf("  install dir: %s\n", paths.InstallDir)
 	fmt.Printf("  data dir:    %s\n", paths.DataDir)
-	fmt.Printf("  autostart:   %s\n", service.Describe(cfg))
+	if o.noAutostart {
+		fmt.Printf("  autostart:   skipped (-no-autostart)\n")
+	} else {
+		fmt.Printf("  autostart:   %s\n", service.Describe(cfg))
+	}
 	fmt.Printf("  channel:     %s\n", o.manifestURL)
 	return nil
 }
